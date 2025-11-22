@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deteksi Mata - Sistem Monitoring</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            padding: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .video-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .video-container {
+            position: relative;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #videoFeed {
+            width: 100%;
+            max-width: 500px;
+            height: auto;
+            border-radius: 10px;
+            background: #000;
+        }
+
+        .video-placeholder {
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .video-status {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.9em;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            min-width: 140px;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+            color: white;
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .metrics-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .metrics-section h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            text-align: center;
+            border-left: 4px solid #3498db;
+        }
+
+        .metric-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin: 10px 0;
+        }
+
+        .metric-label {
+            color: #7f8c8d;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .session-info {
+            background: #e8f4fc;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .warnings-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .warnings-section h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+
+        .warning-item {
+            padding: 12px 15px;
+            margin: 8px 0;
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            color: #856404;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .warning-item.alert {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-normal { background: #27ae60; }
+        .status-warning { background: #f39c12; }
+        .status-alert { background: #e74c3c; }
+        .status-unknown { background: #95a5a6; }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #7f8c8d;
+        }
+
+        .instructions {
+            background: #e8f4fc;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            border-left: 4px solid #3498db;
+        }
+
+        .instructions h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+
+        .instructions ul {
+            list-style-position: inside;
+            color: #34495e;
+        }
+
+        .instructions li {
+            margin: 8px 0;
+            padding-left: 10px;
+        }
+
+        .system-status {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .debug-info {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 0.8em;
+            color: #6c757d;
+            margin-top: 10px;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #27ae60;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 5px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+        }
+
+        .notification.warning {
+            background: #f39c12;
+        }
+
+        .notification.error {
+            background: #e74c3c;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>👁️ Sistem Deteksi Mata</h1>
+            <p>Monitor kesehatan mata selama penggunaan komputer</p>
+        </div>
+
+        <div class="content">
+            <!-- Bagian Video -->
+            <div class="video-section">
+                <div class="video-container">
+                    <div class="video-status" id="videoStatus">Status: Menunggu</div>
+                    <img id="videoFeed" src="" alt="Video Feed" style="display: none;">
+                    <div class="video-placeholder" id="videoPlaceholder">
+                        <div>🎥 Kamera akan muncul di sini</div>
+                        <div style="font-size: 0.9em; margin-top: 10px; opacity: 0.8;">
+                            Klik "Mulai Tracking" untuk memulai
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="system-status" id="systemStatus">
+                    Sistem siap - Klik Mulai Tracking untuk memulai
+                </div>
+                
+                <div class="controls">
+                    <button class="btn btn-primary" onclick="startTracking()" id="btnStart">
+                        ▶ Mulai Tracking
+                    </button>
+                    <button class="btn btn-danger" onclick="stopTracking()" id="btnStop" disabled>
+                        ⏹️ Stop Tracking
+                    </button>
+                    <button class="btn btn-warning" onclick="resetSession()" id="btnReset">
+                        🔄 Reset Sesi
+                    </button>
+                </div>
+
+                <div class="instructions">
+                    <h3>📋 Petunjuk Penggunaan:</h3>
+                    <ul>
+                        <li>Klik "Mulai Tracking" untuk memulai monitoring</li>
+                        <li>Izinkan akses kamera ketika diminta</li>
+                        <li>Pastikan wajah terlihat jelas di kamera</li>
+                        <li>Pertahankan jarak 40-75 cm dari layar</li>
+                        <li>Sistem akan memberi peringatan otomatis</li>
+                        <li>Gunakan pencahayaan yang cukup</li>
+                        <li><strong>Data metrics tetap tersimpan saat stop tracking</strong></li>
+                        <li><strong>Gunakan "Reset Sesi" untuk menghapus semua data</strong></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Bagian Metrics -->
+            <div class="metrics-section">
+                <h2>📊 Metrics Real-time</h2>
+                
+                <div class="session-info">
+                    <strong>Status Sesi:</strong> 
+                    <span id="sessionStatus">Tidak Aktif</span> | 
+                    <strong>Durasi:</strong> 
+                    <span id="sessionDuration">0 detik</span>
+                </div>
+                
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Total Kedipan</div>
+                        <div class="metric-value" id="metricBlinks">0</div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-label">Frekuensi Kedip</div>
+                        <div class="metric-value" id="metricBlinkRate">0.0/mnt</div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-label">Jarak ke Layar</div>
+                        <div class="metric-value" id="metricDistance">0.0 cm</div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-label">Status Mata</div>
+                        <div class="metric-value" id="metricStatus">
+                            <span class="status-indicator status-unknown"></span>
+                            Normal
+                        </div>
+                    </div>
+                </div>
+
+                <div class="warnings-section">
+                    <h3>⚠️ Peringatan Sistem</h3>
+                    <div id="warningsContainer">
+                        <div class="loading">Tidak ada peringatan saat ini</div>
+                    </div>
+                </div>
+
+                <div class="debug-info">
+                    <div>Connection: <span id="connectionStatus">Disconnected</span></div>
+                    <div>Last Update: <span id="lastUpdate">-</span></div>
+                    <div>Tracking: <span id="trackingStatus">Inactive</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let metricsInterval;
+        let videoFeedElement;
+        let videoPlaceholder;
+        let isTracking = false;
+        let videoStreamActive = false;
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            videoFeedElement = document.getElementById('videoFeed');
+            videoPlaceholder = document.getElementById('videoPlaceholder');
+            updateSystemStatus('Sistem siap', 'info');
+            checkServerStatus();
+            
+            // Setup video feed error handling
+            setupVideoFeedHandlers();
+            
+            // Start metrics updates untuk menampilkan data persistent
+            startMetricsUpdates();
+        });
+
+        // Setup video feed event handlers
+        function setupVideoFeedHandlers() {
+            videoFeedElement.onload = function() {
+                document.getElementById('videoStatus').textContent = 'Status: Video Aktif';
+                videoStreamActive = true;
+                console.log('✅ Video feed loaded successfully');
+            };
+            
+            videoFeedElement.onerror = function() {
+                document.getElementById('videoStatus').textContent = 'Status: Error Video';
+                videoStreamActive = false;
+                console.error('❌ Error loading video feed');
+                
+                // Auto-retry jika tracking aktif
+                if (isTracking) {
+                    setTimeout(() => {
+                        if (isTracking && !videoStreamActive) {
+                            console.log('🔄 Auto-retrying video feed...');
+                            startVideoFeed();
+                        }
+                    }, 2000);
+                }
+            };
+            
+            videoFeedElement.onloadstart = function() {
+                document.getElementById('videoStatus').textContent = 'Status: Memuat Video...';
+            };
+        }
+
+        // Check server status
+        async function checkServerStatus() {
+            try {
+                const response = await fetch('/status');
+                const data = await response.json();
+                updateConnectionStatus('Connected', 'success');
+                updateTrackingStatus(data.tracking_active);
+                updateSessionInfo(data.session_duration, data.tracking_active);
+            } catch (error) {
+                updateConnectionStatus('Disconnected', 'error');
+                console.error('Server status check failed:', error);
+            }
+        }
+
+        // Start eye tracking - FIXED VERSION (One Click)
+        async function startTracking() {
+            if (isTracking) {
+                showNotification('Tracking sudah berjalan', 'warning');
+                return;
+            }
+            
+            console.log('🚀 Starting tracking...');
+            updateSystemStatus('Memulai tracking...', 'warning');
+            document.getElementById('btnStart').disabled = true;
+            
+            try {
+                // Langsung mulai backend tracking
+                const response = await fetch('/start_tracking');
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    // Update UI state immediately
+                    isTracking = true;
+                    document.getElementById('btnStop').disabled = false;
+                    updateTrackingStatus(true);
+                    
+                    // Start video feed
+                    startVideoFeed();
+                    
+                    updateSystemStatus('Tracking aktif - Lihat kamera', 'success');
+                    showNotification('Tracking dimulai! Data metrics sebelumnya tetap tersimpan.', 'success');
+                    
+                    console.log('✅ Tracking started successfully');
+                    
+                } else {
+                    throw new Error(data.message);
+                }
+                
+            } catch (error) {
+                console.error('❌ Error starting tracking:', error);
+                updateSystemStatus('Gagal memulai tracking: ' + error.message, 'error');
+                showNotification('Error: ' + error.message, 'error');
+                
+                // Reset UI state
+                document.getElementById('btnStart').disabled = false;
+                isTracking = false;
+                updateTrackingStatus(false);
+            }
+        }
+
+        // Start video feed
+        function startVideoFeed() {
+            videoFeedElement.style.display = 'block';
+            videoPlaceholder.style.display = 'none';
+            
+            // Gunakan timestamp untuk avoid cache
+            const timestamp = new Date().getTime();
+            videoFeedElement.src = '/video_feed?' + timestamp;
+            
+            console.log('📹 Video feed started with timestamp:', timestamp);
+            
+            // Set timeout untuk check jika video gagal load
+            setTimeout(() => {
+                if (!videoStreamActive && isTracking) {
+                    console.log('🔄 Video feed timeout, retrying...');
+                    videoFeedElement.src = '/video_feed?' + new Date().getTime();
+                }
+            }, 3000);
+        }
+
+        // Stop eye tracking - TANPA reset metrics
+        async function stopTracking() {
+            if (!isTracking) return;
+            
+            console.log('🛑 Stopping tracking...');
+            document.getElementById('btnStop').disabled = true;
+            updateSystemStatus('Menghentikan tracking...', 'warning');
+            
+            try {
+                const response = await fetch('/stop_tracking');
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    // Hide video feed
+                    videoFeedElement.style.display = 'none';
+                    videoPlaceholder.style.display = 'block';
+                    videoFeedElement.src = '';
+                    videoStreamActive = false;
+                    
+                    // Update UI state
+                    isTracking = false;
+                    document.getElementById('btnStart').disabled = false;
+                    updateTrackingStatus(false);
+                    
+                    updateSystemStatus('Tracking dihentikan', 'info');
+                    document.getElementById('videoStatus').textContent = 'Status: Dihentikan';
+                    
+                    showNotification('Tracking dihentikan. Data metrics tetap tersimpan.', 'success');
+                    console.log('✅ Tracking stopped successfully - Metrics preserved');
+                    
+                } else {
+                    throw new Error(data.message);
+                }
+                
+            } catch (error) {
+                console.error('❌ Error stopping tracking:', error);
+                updateSystemStatus('Error menghentikan tracking', 'error');
+                document.getElementById('btnStop').disabled = false;
+            }
+        }
+
+        // Reset session - HANYA di sini metrics direset
+        async function resetSession() {
+            if (isTracking) {
+                showNotification('Harus stop tracking terlebih dahulu sebelum reset sesi', 'warning');
+                return;
+            }
+            
+            try {
+                console.log('🔄 Resetting session...');
+                const response = await fetch('/reset_session');
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    // Update metrics immediately
+                    await updateMetrics();
+                    showNotification('Sesi telah direset. Semua data metrics dikembalikan ke nol.', 'success');
+                    console.log('✅ Session reset successfully - All metrics cleared');
+                } else {
+                    throw new Error(data.message);
+                }
+                
+            } catch (error) {
+                console.error('❌ Error resetting session:', error);
+                showNotification('Error mereset sesi: ' + error.message, 'error');
+            }
+        }
+
+        // Update session info
+        function updateSessionInfo(duration, active) {
+            const durationElem = document.getElementById('sessionDuration');
+            const statusElem = document.getElementById('sessionStatus');
+            
+            const minutes = Math.floor(duration / 60);
+            const seconds = Math.floor(duration % 60);
+            durationElem.textContent = `${minutes}m ${seconds}s`;
+            
+            statusElem.textContent = active ? 'Aktif' : 'Tidak Aktif';
+            statusElem.style.color = active ? '#27ae60' : '#e74c3c';
+        }
+
+        // Update tracking status display
+        function updateTrackingStatus(active) {
+            const statusElem = document.getElementById('trackingStatus');
+            statusElem.textContent = active ? 'Active' : 'Inactive';
+            statusElem.style.color = active ? '#27ae60' : '#e74c3c';
+        }
+
+        // Start metrics updates
+        function startMetricsUpdates() {
+            // Update immediately
+            updateMetrics();
+            
+            // Then update every second
+            metricsInterval = setInterval(updateMetrics, 1000);
+        }
+
+        // Update metrics from server
+        async function updateMetrics() {
+            try {
+                const response = await fetch('/get_metrics');
+                const metrics = await response.json();
+                
+                // Update metric displays
+                document.getElementById('metricBlinks').textContent = metrics.blinks;
+                document.getElementById('metricBlinkRate').textContent = metrics.blink_rate.toFixed(1) + '/mnt';
+                document.getElementById('metricDistance').textContent = metrics.distance.toFixed(1) + ' cm';
+                
+                // Update session info
+                updateSessionInfo(metrics.session_duration, metrics.tracking_active);
+                
+                // Update status with indicator
+                updateStatusIndicator(metrics.fatigue_status);
+
+                // Update warnings
+                updateWarnings(metrics.warnings, metrics.fatigue_status);
+                
+                // Update connection status
+                updateConnectionStatus('Connected', 'success');
+                document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+                
+            } catch (error) {
+                console.error('❌ Error fetching metrics:', error);
+                updateConnectionStatus('Disconnected', 'error');
+                
+                // Jika error berkepanjangan, mungkin tracking sudah stop
+                if (isTracking) {
+                    setTimeout(() => {
+                        if (isTracking) {
+                            console.log('🔴 Auto-stopping due to connection error');
+                            stopTracking();
+                        }
+                    }, 5000);
+                }
+            }
+        }
+
+        // Update status indicator
+        function updateStatusIndicator(fatigueStatus) {
+            const statusElem = document.getElementById('metricStatus');
+            let statusClass = 'status-unknown';
+            let statusText = 'Unknown';
+            
+            switch (fatigueStatus) {
+                case 'Normal':
+                    statusClass = 'status-normal';
+                    statusText = 'Normal';
+                    break;
+                case 'Lelah':
+                    statusClass = 'status-alert';
+                    statusText = 'Lelah';
+                    break;
+                case 'Kedipan Rendah':
+                    statusClass = 'status-warning';
+                    statusText = 'Kedipan Rendah';
+                    break;
+                default:
+                    statusClass = 'status-unknown';
+                    statusText = 'Unknown';
+            }
+            
+            statusElem.innerHTML = `
+                <span class="status-indicator ${statusClass}"></span>
+                ${statusText}
+            `;
+        }
+
+        // Update warnings
+        function updateWarnings(warnings, fatigueStatus) {
+            const warningsContainer = document.getElementById('warningsContainer');
+            if (warnings && warnings.length > 0) {
+                warningsContainer.innerHTML = warnings.map(warning => 
+                    `<div class="warning-item ${fatigueStatus === 'Lelah' ? 'alert' : ''}">
+                        ⚠️ ${warning}
+                    </div>`
+                ).join('');
+            } else {
+                warningsContainer.innerHTML = '<div class="loading">Tidak ada peringatan saat ini</div>';
+            }
+        }
+
+        // Helper functions
+        function updateSystemStatus(message, type) {
+            const statusElem = document.getElementById('systemStatus');
+            statusElem.textContent = message;
+            
+            // Reset classes
+            statusElem.className = 'system-status';
+            
+            // Add type-based styling
+            const styles = {
+                error: {
+                    background: '#f8d7da',
+                    color: '#721c24',
+                    borderLeft: '4px solid #e74c3c'
+                },
+                warning: {
+                    background: '#fff3cd',
+                    color: '#856404',
+                    borderLeft: '4px solid #f39c12'
+                },
+                success: {
+                    background: '#d1ecf1',
+                    color: '#0c5460',
+                    borderLeft: '4px solid #3498db'
+                },
+                info: {
+                    background: '#fff3cd',
+                    color: '#856404',
+                    borderLeft: '4px solid #f39c12'
+                }
+            };
+            
+            const style = styles[type] || styles.info;
+            Object.assign(statusElem.style, style);
+        }
+
+        function updateConnectionStatus(status, type) {
+            const statusElem = document.getElementById('connectionStatus');
+            statusElem.textContent = status;
+            statusElem.style.color = type === 'success' ? '#27ae60' : '#e74c3c';
+        }
+
+        function showNotification(message, type = 'success') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            
+            // Add to page
+            document.body.appendChild(notification);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+            
+            // Also log to console
+            console.log('💬 Notification:', message);
+        }
+
+        // Handle page unload
+        window.addEventListener('beforeunload', function() {
+            if (isTracking) {
+                // Coba stop tracking sebelum unload
+                fetch('/stop_tracking').catch(console.error);
+            }
+        });
+
+        // Handle page visibility change
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden && isTracking) {
+                console.log('📄 Page hidden, tracking might be affected');
+            }
+        });
+
+        // Debug functions accessible from browser console
+        window.appDebug = {
+            isTracking: () => isTracking,
+            videoStreamActive: () => videoStreamActive,
+            startTracking: () => startTracking(),
+            stopTracking: () => stopTracking(),
+            resetSession: () => resetSession(),
+            getStatus: async () => {
+                const response = await fetch('/debug');
+                return response.json();
+            }
+        };
+
+        console.log('🔧 Debug functions available: appDebug.startTracking(), appDebug.stopTracking(), etc.');
+    </script>
+</body>
+</html>
